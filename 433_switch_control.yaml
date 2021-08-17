@@ -1,0 +1,152 @@
+esphome:
+  name: 433_switch_control_
+  platform: ESP8266
+  board: esp01_1m
+  platformio_options:
+   board_build.f_cpu: 160000000L
+  #platform: ESP32
+  #board: esp32dev
+  includes:
+    - 433_switch_main.h
+    - 433_switch_tx.h
+    - RFM69OOKregisters.h
+    - ha_control.h
+    - rfm69_control.h
+wifi:
+  ssid: ""
+  password: ""
+
+
+captive_portal:
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+    safe_mode: True
+
+#use cover to get a dimmer that can update from recieved data, not ideal but it works
+cover:
+- platform: custom
+  lambda: |-
+    auto dimmer_1 = new MyCustomCover_Dimmer(23861012,1);
+    App.register_component(dimmer_1);
+    return {dimmer_1};
+
+  covers:
+    - name: "dimmer 1"
+
+# transmit ONLY with light dimmer
+light:
+- platform: custom
+  lambda: |-
+    auto bedroom_light = new MyCustomLightOutput(48556258,1);
+    auto christmas = new MyCustomLightOutput(13772883,0);
+    App.register_component(bedroom_light);
+    App.register_component(christmas);
+    return {bedroom_light,christmas};
+
+  lights:
+    - name: "bedroom roof light"
+      gamma_correct: 0
+      default_transition_length: 0ms
+      
+    - name: "christmas light" 
+      gamma_correct: 0
+      default_transition_length: 0ms
+      
+switch:
+- platform: restart
+  name: "433 esp reboot"
+##auto roof = new New_remote_switch(adress,unit);  two way 433 control can update from recieved data
+- platform: custom
+  lambda: |-
+    auto roof = new New_remote_switch(48556258,0);
+    auto flower = new New_remote_switch(56384447,0);
+    auto window = new New_remote_switch(39768182,0);
+    auto Humidifier = new New_remote_switch(12154598,0);
+    auto nm_switch = new New_remote_switch(47542949,0);
+    auto door_sw = new New_remote_switch(30892954,1);
+    auto nightplayer = new New_remote_switch(56327166,0);
+    App.register_component(roof);
+    App.register_component(flower);
+    App.register_component(window);
+    App.register_component(Humidifier);
+    App.register_component(nm_switch);
+    App.register_component(door_sw);
+    App.register_component(nightplayer);
+    return {roof,flower,window,Humidifier,nm_switch,door_sw,nightplayer};
+    
+  switches:
+    - name: "livingroom roof light"
+    - name: "flower"
+    - name: "window"
+    - name: "Humidifier"
+    - name: "night morning sw"
+    - name: "door switch"
+    - name: "nightplayer"
+    
+## auto coffee = new RC_remote_switch(on code,off code,protocol,lenght);  two way 433 control can update from recieved data
+- platform: custom
+  lambda: |-
+    auto coffee = new RC_remote_switch(5601344,6041760,4,24);
+    auto mobil = new RC_remote_switch(383808,213664,4,24);
+    auto toothbrush = new RC_remote_switch(7748268,7854220,4,24);
+    auto door_fan = new RC_remote_switch(10747564,10636428,4,24);
+    auto window_fan = new RC_remote_switch(12113580,11631500,4,24);
+    auto fan_timer = new RC_remote_switch(16556972,16592268,4,24);
+    auto balcony_door_fan = new RC_remote_switch(6173044,6288932,4,24);
+    App.register_component(coffee);
+    App.register_component(mobil);
+    App.register_component(toothbrush);
+    App.register_component(door_fan);
+    App.register_component(window_fan);
+    App.register_component(fan_timer);
+    App.register_component(balcony_door_fan);
+    return {coffee,mobil,toothbrush,door_fan,window_fan,fan_timer,balcony_door_fan};
+    
+  switches:
+    - name: "coffee"
+    - name: "mobil"
+    - name: "toothbrush"
+    - name: "door fan"
+    - name: "window fan"
+    - name: "fan timer"
+    - name: "balcony door fan"
+
+ 
+ # this displays the last sent or recieved 433 data, also handles the main part of the 433 control code
+ # you can use this to trigger a automation, this will trigger a automation better, a switch can miss a trigger if the state is on and it recieved another on signal...
+ 
+#platform: state
+#entity_id: sensor.last_sent_recieved
+#to: recieved address 5524802 lenght 24 protocol 4
+ 
+text_sensor:
+- platform: custom
+  lambda: |-
+    auto last_sent_received = new Last_sent_received();
+    App.register_component(last_sent_received);
+    return {last_sent_received};
+
+  text_sensors:
+    name: "last sent/recieved "    
+
+# with this you can send new remote switch data directly from a automation or similar without having to make a new switch here in esphome
+#  just look for "esphome.433_switch_control_nrs_tx_manual" under call service
+
+#service: esphome.433_switch_control_nrs_tx_manual
+#data:
+#  adress: '486848648'
+#  unit: 1
+#  state: 1
+
+# state: 2 is dimmer 0, state: 17 is dimmer 15 (max)
+# state: 0, state: 1 is off/on
+custom_component:
+- lambda: |-
+    auto my_custom = new MyCustomComponent();
+    return {my_custom};

@@ -128,7 +128,7 @@ void RFM69OOK_initialize_new()
     {255, 0}
   };
   
-
+  //RFM69_WriteReg(REG_OCP,RF_OCP_OFF); // ---------------ONLY ON HW/HCW---------- disable OverCurrentProtection for HW/HCW without this it wont transmit
   RFM69_WriteReg(REG_PACKETCONFIG2, 0x02); // kill just incase encryption are set
 
   for (byte i = 0; CONFIG[i][0] != 255; i++)

@@ -1,7 +1,8 @@
 //code from https://github.com/flax2000/esphome_433_rfm69_rc_new_remote_sw
 #include "esphome.h"
+
 //remove if you dont use rfm69 >> // #define use_rfm69
-//#define use_rfm69   
+#define use_rfm69   
 
 #define _rx_pin 3 //connect this to DIO2 on rfm69 or data pin on ordinary reciever
 
@@ -14,9 +15,32 @@
 // MOSI BIT: Digital Input     SPI Slave Data Input
 #endif
 
+
+#include "433_switch_tx.h"
+#include "rfm69_control.h"
+
+
+
+#if defined(ESP8266)
+// interrupt handler and related code must be in RAM on ESP8266,
+// according to issue #46.
+#define RECEIVE_ATTR IRAM_ATTR
+#define VAR_ISR_ATTR
+#elif defined(ESP32)
+#define RECEIVE_ATTR IRAM_ATTR
+#define VAR_ISR_ATTR DRAM_ATTR
+#else
+#define RECEIVE_ATTR
+#define VAR_ISR_ATTR
+#endif
+
+
+
+
+
+
 char have_data = 0;
 std::string my_data;
-
 
 unsigned long send_NRS_adress[4] = {0};
 char send_NRS_unit[4] = {0};
@@ -51,7 +75,7 @@ struct NewRemoteCode {
 
 
 
-  void ICACHE_RAM_ATTR  NRS_rx_(uint16_t duration)
+  void RECEIVE_ATTR  NRS_rx_(uint16_t duration)
 {
 	
 static uint16_t duration_old;	
@@ -185,7 +209,7 @@ static uint16_t duration_old;
 		if (_state == 64 || _state == 72)
       
       {			
-          extern std::string my_data;
+
           my_data = "recieved address ";
           my_data += to_string(receivedCode.address & 0x3FFFFFF);
 
@@ -199,16 +223,11 @@ static uint16_t duration_old;
             my_data += "dimm ";
             my_data += to_string(receivedCode.dimLevel & B1111);
           }
-          extern char have_data;
           have_data = 1;
 
-          extern unsigned long recieve_NRS_adress;
           recieve_NRS_adress = receivedCode.address & 0x3FFFFFF;
-          extern char recieve_NRS_unit;
           recieve_NRS_unit = receivedCode.unit & B1111;
-          extern char recieve_NRS_state;
           recieve_NRS_state = receivedCode.switchType;
-          extern char recieve_NRS_dimmer;
           recieve_NRS_dimmer = receivedCode.dimLevel & B1111;	
 		  receivedCode.dimLevel=0;	
 		
@@ -250,7 +269,7 @@ static inline unsigned int diff(int A, int B) {
   return abs(A - B);
 }
 
- bool ICACHE_RAM_ATTR  receiveProtocol(const int p, unsigned int changeCount) {
+ bool RECEIVE_ATTR  receiveProtocol(const int p, unsigned int changeCount) {
 
   static const Protocol proto[] = {
 
@@ -313,18 +332,16 @@ static inline unsigned int diff(int A, int B) {
 
 if(code>100)// this will ignore 0 or 10 or ... sinals....
 {
-  extern unsigned long recieve_rc_adress;
-  extern  char recieve_rc_protocol;
+
   recieve_rc_adress = code;
   recieve_rc_protocol = p;
-  extern std::string my_data;
   my_data = "recieved address ";
   my_data += to_string(code);
   my_data += " lenght ";
   my_data += to_string(((changeCount - 1) / 2));
   my_data += " protocol ";
   my_data += to_string(p);
-  extern char have_data;
+
   have_data = 1;
 }
   
@@ -332,7 +349,7 @@ if(code>100)// this will ignore 0 or 10 or ... sinals....
 }
 
 
- void ICACHE_RAM_ATTR  rc_sw_rx_(uint16_t duration)
+ void RECEIVE_ATTR  rc_sw_rx_(uint16_t duration)
 {
   const uint16_t nSeparationLimit = 4300; //change this depending on the protocol you need to recieve mayby 1500-12000
   static uint16_t changeCount = 0;
@@ -379,7 +396,7 @@ if(code>100)// this will ignore 0 or 10 or ... sinals....
 
 
 //-------------------------------------------------ext_int_1----------------------------------------------------------------------
-     void ICACHE_RAM_ATTR  ext_int_1()
+     void RECEIVE_ATTR  ext_int_1()
     {
 		
       static unsigned long edgeTimeStamp[3] = {0, };  // Timestamp of edges
@@ -416,8 +433,7 @@ if(code>100)// this will ignore 0 or 10 or ... sinals....
 
 class Last_sent_received : public PollingComponent, public TextSensor {
   public:
-#include "433_switch_tx.h"
-#include "rfm69_control.h"
+
 
     uint16_t interupt_start_delay = 200; // wait before starting radio and interupts
 
@@ -441,8 +457,7 @@ Serial.end();
    	  
     }
     void update() override {
-      extern std::string my_data;
-      extern char have_data;
+
      
 
       if (interupt_start_delay > 0)//wait for esp to start before attaching interupt
@@ -474,10 +489,7 @@ interupt_start_delay=0;
         publish_state(my_data);
       }
 
-      extern unsigned long send_NRS_adress[4] ;
-      extern char send_NRS_unit[4];
-      extern char send_NRS_state[4];
-      extern int send_NRS_dimmer[4];
+
 
 for (int i = 0; i <= 3; i++)
 {
@@ -519,9 +531,7 @@ for (int i = 0; i <= 3; i++)
       }
 	  
 }
-      extern unsigned long send_rc_adress[4];
-      extern char send_rc_protocol[4];
-      extern char send_rc_lenght[4];
+
 
   
    for (int i = 0; i <= 3; i++)
@@ -556,79 +566,62 @@ for (int i = 0; i <= 3; i++)
 
 //--------------------------------------------------------------------------------------------------------------------
 
+
 class MyCustomComponent : public Component, public CustomAPIDevice {
- public:
-  void setup() override {
-
-
-	
-	    register_service(&MyCustomComponent::on_NRS_tx, "NRS_tx_manual",
-                     {"adress", "unit","state"});
-					 
-		register_service(&MyCustomComponent::on_RC_tx, "RC_tx_manual",
-                     {"adress", "protocol","lenght"});			 
-	
-  }
-
-  void on_NRS_tx(std::string adress, int unit,int state) {
-    ESP_LOGD("custom", "NRS data recieved %s", adress.c_str());   
-      extern unsigned long send_NRS_adress[4];
-      extern char send_NRS_unit[4];
-      extern char send_NRS_state[4];
-	  extern int send_NRS_dimmer[4];
-	  int dimmer_send=0;
-	  if(state>1)
-	  {
-		  dimmer_send=state-2;
-		  if(dimmer_send>15)
-		  { 
-			  dimmer_send=15;
-		  }		  
-		  state=2;  		  
-	  }
-
-	  	  for (int i = 0; i <= 3; i++)
-	  {
-		  if(send_NRS_adress[i]==0)
-		  {
-	  send_NRS_dimmer[i]=dimmer_send;
-	  send_NRS_state[i] = state;	  	  
-	  send_NRS_unit[i] = unit;
-      send_NRS_adress[i] = atol(adress.c_str());
-	  break;
-		  }
-	  }
-	  
-
-  }
-
-  void on_RC_tx(std::string adress, int protocol,int lenght) {
-    ESP_LOGD("custom", "rc data recieved %s", adress.c_str());   
-      extern unsigned long send_rc_adress[4];
-      extern char send_rc_protocol[4];
-      extern char send_rc_lenght[4];
-
-for (int i = 0; i <= 3; i++)
-{
-        if(send_rc_adress[i]==0)
-		{
-        send_rc_protocol[i] = protocol;
-        send_rc_lenght[i] = lenght;
-		send_rc_adress[i] = atol(adress.c_str());
-		break;
-		}
-}
-
-  }
-
-};
-
-
-
-
-
-
-
+  public:
+  
+    float get_setup_priority() const override {
+      return esphome::setup_priority::AFTER_WIFI;
+    }
+    void setup() override {
+  
+  
+  
+      register_service(&MyCustomComponent::on_NRS_tx, "NRS_tx_manual",
+                       { "adress", "unit", "state" });
+  
+      register_service(&MyCustomComponent::on_RC_tx, "RC_tx_manual",
+                       { "adress", "protocol", "lenght" });
+    }
+  
+    void on_NRS_tx(std::string adress, int unit, int state) {
+      ESP_LOGD("custom", "NRS data recieved %s", adress.c_str());
+      int dimmer_send = 0;
+      if (state > 1) {
+        dimmer_send = state - 2;
+        if (dimmer_send > 15) {
+          dimmer_send = 15;
+        }
+        state = 2;
+      }
+  
+      for (int i = 0; i <= 3; i++) {
+        if (send_NRS_adress[i] == 0) {
+          send_NRS_dimmer[i] = dimmer_send;
+          send_NRS_state[i] = state;
+          send_NRS_unit[i] = unit;
+          send_NRS_adress[i] = atol(adress.c_str());
+          break;
+        }
+      }
+    }
+  
+    void on_RC_tx(std::string adress, int protocol, int lenght) {
+      ESP_LOGD("custom", "rc data recieved %s", adress.c_str());
+  
+      for (int i = 0; i <= 3; i++) {
+        if (send_rc_adress[i] == 0) {
+          send_rc_protocol[i] = protocol;
+          send_rc_lenght[i] = lenght;
+          send_rc_adress[i] = atol(adress.c_str());
+          break;
+        }
+      }
+    }
+  };
+  
+  
+  
 
 
 

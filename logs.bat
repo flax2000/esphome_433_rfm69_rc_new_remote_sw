@@ -1,1 +1,1 @@
-esphome 433_switch_control.yaml logs
+esphome minimal_tst.yaml logs

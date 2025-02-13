@@ -1,32 +1,38 @@
 esphome:
-  name: 433_switch_control_
-  platform: ESP8266
-  board: esp01_1m
+  name: 433-switch-control
   platformio_options:
    board_build.f_cpu: 160000000L
-  #platform: ESP32
-  #board: esp32dev
   includes:
     - 433_switch_main.h
     - 433_switch_tx.h
     - RFM69OOKregisters.h
     - ha_control.h
     - rfm69_control.h
+
+
+
+
+
+esp8266:
+  board: esp01_1m
+
+
 wifi:
-  ssid: ""
-  password: ""
+  ssid: "----"
+  password: "----"
+
+api:
 
 
-captive_portal:
 
 # Enable logging
 logger:
+  baud_rate: 0 
 
 # Enable Home Assistant API
-api:
-
 ota:
-    safe_mode: True
+  - platform: esphome
+
 
 #use cover to get a dimmer that can update from recieved data, not ideal but it works
 cover:
@@ -150,3 +156,4 @@ custom_component:
 - lambda: |-
     auto my_custom = new MyCustomComponent();
     return {my_custom};
+    

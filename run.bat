@@ -1,1 +1,1 @@
-esphome 433_switch_control.yaml run || cmd /k
+esphome minimal_tst.yaml run || cmd /k

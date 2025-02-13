@@ -1,4 +1,4 @@
-
+#pragma once
 //-----------------------------------------------------------------------------------------------------------
 class RC_remote_switch : public Component, public Switch {
   public:

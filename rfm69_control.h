@@ -1,3 +1,4 @@
+#pragma once
 //----------------------------------------------------------------------rfm69------------------------------------------------------------
 // parts copied from: https://github.com/kobuki/RFM69OOK/blob/master/RFM69OOK.cpp, and random forum post here and there and finally it just worked as i wanted it too...
 // simple soft spi are good enought for this, write only spi, not any real need to read anything...	
@@ -29,7 +30,6 @@ void RFM69_RW(unsigned char uint8_t)
   }
   //return (uint8_t);                    // return read unsigned char
 }
-
 
 void RFM69_WriteReg(unsigned char reg, unsigned char value)
 {
@@ -87,6 +87,9 @@ void RFM69OOK_initialize_new()
   digitalWrite(CSNq, 1);                 // Spi disable 	
   delay(1);		
 	
+  RFM69OOK_setMode(RF69OOK_MODE_STANDBY);
+  delay(100);
+
   uint32_t freqHz = 433.92 * 1000000;
   freqHz /= RF69OOK_FSTEP; // divide down by FSTEP to get FRF
   uint16_t bitrate =3300;
@@ -105,16 +108,21 @@ void RFM69OOK_initialize_new()
     /* 0x08 */ {REG_FRFMID, (uint8_t)(freqHz >> 8)},
     /* 0x09 */ {REG_FRFLSB, (uint8_t)freqHz},
 
-    /* 0x0D */ { REG_LISTEN1, 0x92 },
-    /* 0x0E */ { REG_LISTEN2, 0x0C },
-    /* 0x0F */ { REG_LISTEN3, 0xC8 },
+        /* 0x0D */ //{ REG_LISTEN1, 0x92 },
+        /* 0x0E */ //{ REG_LISTEN2, 0x0C },
+        /* 0x0F */ //{ REG_LISTEN3, 0xC8 },
 
-    /* 0x18 */ { REG_LNA, RF_LNA_ZIN_200 | RF_LNA_GAINSELECT_AUTO}, //LNA input impedance 200 Ohm, auto gain select
-    /* 0x19 */ { REG_RXBW, RF_RXBW_DCCFREQ_010 | RF_RXBW_MANT_16| RF_RXBW_EXP_2 }, 
-    /* 0x1B */ { REG_OOKPEAK, RF_OOKPEAK_THRESHTYPE_PEAK | RF_OOKPEAK_PEAKTHRESHSTEP_000 | RF_OOKPEAK_PEAKTHRESHDEC_000 }, //74
-    /* 0x1D */ { REG_OOKFIX, 6 }, 
-    /* 0x25 */ { REG_DIOMAPPING1, RF_DIOMAPPING1_DIO0_01 | RF_DIOMAPPING1_DIO2_00 | RF_DIOMAPPING1_DIO3_01 }, //DIO0 is the only IRQ we're using
-    /* 0x26 */ { REG_DIOMAPPING2, RF_DIOMAPPING2_CLKOUT_OFF}, //DIO0, DIO2 for data transfer
+        /* 0x0D */ { REG_LISTEN1, RF_LISTEN1_RESOL_IDLE_4100 | RF_LISTEN1_RESOL_RX_4100 | RF_LISTEN1_END_01},
+        /* 0x0E */ { REG_LISTEN2, 2 },//ListenCoefIdle
+        /* 0x0F */ { REG_LISTEN3, 35 },//ListenCoefRx
+
+
+    /* 0x18 */ { REG_LNA, RF_LNA_ZIN_200 | RF_LNA_GAINSELECT_MAX}, //LNA input impedance 200 Ohm, auto gain select
+    /* 0x19 */ { REG_RXBW, RF_RXBW_DCCFREQ_010 | RF_RXBW_MANT_16| RF_RXBW_EXP_0 }, 
+    /* 0x1B */ { REG_OOKPEAK, RF_OOKPEAK_THRESHTYPE_PEAK | RF_OOKPEAK_PEAKTHRESHSTEP_000 | RF_OOKPEAK_PEAKTHRESHDEC_010 }, //74
+    /* 0x1D */ { REG_OOKFIX, 12 }, 
+    /* 0x25 */ { REG_DIOMAPPING1, RF_DIOMAPPING1_DIO2_00}, //DIO2 is the only IRQ we're using
+    /* 0x26 */ { REG_DIOMAPPING2, RF_DIOMAPPING2_CLKOUT_OFF}, // DIO2 for data transfer
     /* 0x28 */ { REG_IRQFLAGS2, RF_IRQFLAGS2_FIFOOVERRUN }, // Writing to this bit ensures the FIFO & status flags are reset
     /* 0x29 */ { REG_RSSITHRESH, 240}, //must be set to dBm = (-Sensitivity / 2)  Decrease this if you get failed ota uploads or many random reboots, 200 shoule be stable if you have rf noice
     {255, 0}

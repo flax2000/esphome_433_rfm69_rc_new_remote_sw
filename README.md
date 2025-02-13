@@ -21,6 +21,12 @@ rfm69_control.h   “{ REG_RSSITHRESH, 240},”
 -always read and follow the laws regulating 433 radios where you live-
 
 
+if you are using RFM69HW/HCW ant it wont transmit try to enable this line in rfm69_control.h
+//RFM69_WriteReg(REG_OCP,RF_OCP_OFF); // ---------------ONLY ON HW/HCW---------- disable OverCurrentProtection for HW/HCW without this it wont transmit
+
+I have only used the plain rfm69 so the above in untested but should hopefully enable RFM69HW to transmit
+
+
 If neccecary change the  nSeparationLimit to receive the right rc switch code, 2000-12000 something
 Find this line in 433_switch_main.h “const uint16_t nSeparationLimit = 4300;
 And maybe change this in the same file “int16_t nReceiveTolerance = 80;”
